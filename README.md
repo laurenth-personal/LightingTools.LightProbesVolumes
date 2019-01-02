@@ -20,13 +20,14 @@ Requires Unity 2018.1 or above.
   - vertical and horizontal spacing ( one probe every X meters )
   - offset from floor is at which vertical distance from the collision you want to spawn the first layer of probes
   - number of layers is the number of probes that will be placed vertically above the hit collider
-  - fill volume enabled will fill the whole height of the volume instead of just doing X number of layer
+  - follow floor : when enabled the script performs raycast in order to place lightprobes above existing static geometry that has a collider. When disabled the lightprobes are just placed above the lower face of the volume.
+  - fill volume enabled will fill the whole height of the volume instead of just doing X number of layer. When this is enabled the number of layers is ignored.
   - discard inside geometry will test if your probe is inside an object with collisions. This will only work if the top face of your volume is not itself inside an object with collisions. In order to check this enable "draw Debug" and fill the volume : the green cross at the top has to be located in the air and not inside a geometry.
-  - Click the button !
+- Click the button !
 - When you have several volumes setup in your scene and you want to refresh them all :
-  - Go to lighting / Refresh lightprobes volumes. This will place again the probes in all the volumes in the scene.
+- Go to lighting / Refresh lightprobes volumes. This will place again the probes in all the volumes in the scene.
   
-  # Improvements I would like to do :
+# Improvements I would like to do :
 
 - Replace the raycast to colliders by raycast to meshrenderers
 
