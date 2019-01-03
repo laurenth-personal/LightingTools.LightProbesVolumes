@@ -6,15 +6,50 @@ namespace LightingTools.LightProbesVolumes
     [CustomEditor(typeof(LightProbesVolumeSettings))]
     public class LightProbesVolumeEditor : Editor
     {
+        SerializedProperty horizontalSpacing;
+        SerializedProperty verticalSpacing;
+        SerializedProperty offsetFromFloor;
+        SerializedProperty numberOfLayers;
+        SerializedProperty fillVolume;
+        SerializedProperty followFloor;
+        SerializedProperty discardInsideGeometry;
+        SerializedProperty drawDebug;
+
+        void OnEnable()
+        {
+            horizontalSpacing = serializedObject.FindProperty("horizontalSpacing");
+            verticalSpacing = serializedObject.FindProperty("verticalSpacing");
+            offsetFromFloor = serializedObject.FindProperty("offsetFromFloor");
+            numberOfLayers = serializedObject.FindProperty("numberOfLayers");
+            fillVolume = serializedObject.FindProperty("fillVolume");
+            followFloor = serializedObject.FindProperty("followFloor");
+            discardInsideGeometry = serializedObject.FindProperty("discardInsideGeometry");
+            drawDebug = serializedObject.FindProperty("drawDebug");
+        }
+
         public override void OnInspectorGUI()
         {
-            EditorGUI.BeginChangeCheck();
             var volume = (LightProbesVolumeSettings)target;
-            base.DrawDefaultInspector();
+
+            serializedObject.Update();
+            EditorGUILayout.DelayedFloatField(horizontalSpacing);
+            EditorGUILayout.DelayedFloatField(verticalSpacing);
+            EditorGUILayout.PropertyField(offsetFromFloor);
+            EditorGUILayout.PropertyField(fillVolume);
+            serializedObject.ApplyModifiedProperties();
+            EditorGUI.BeginDisabledGroup(fillVolume.boolValue);
+            EditorGUILayout.PropertyField(numberOfLayers);
+            EditorGUI.EndDisabledGroup();
+            EditorGUILayout.PropertyField(followFloor);
+            EditorGUILayout.PropertyField(discardInsideGeometry);
+            EditorGUILayout.PropertyField(drawDebug);
+
             if (GUILayout.Button("Create Light Probes in Selected Volume"))
             {
                 volume.Populate();
             }
+
+            serializedObject.ApplyModifiedProperties(); 
         }
 
         [MenuItem("GameObject/Light/Lightprobes Volume", false, 10)]
@@ -29,6 +64,7 @@ namespace LightingTools.LightProbesVolumes
             Selection.activeObject = volume;
             volume.AddComponent<LightProbesVolumeSettings>();
             volume.GetComponent<BoxCollider>().size = new Vector3(5, 2, 5);
+            volume.GetComponent<BoxCollider>().isTrigger = true;
         }
     }
 }
