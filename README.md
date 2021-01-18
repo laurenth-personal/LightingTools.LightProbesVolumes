@@ -9,7 +9,7 @@ Requires Unity 2018.1 or above.
 - In the LocalPackages folder extract this repo under a "LightingTools.LightProbesVolumes" folder
 - In the "Packages" folder open the "manifest.json" in a text editing software
 - in "manifest.json" under "dependencies" add the line :
-"li.lightingtools.core": "file:../LocalPackages/LightingTools.LightProbesVolumes" (you need to add a "," if this is not the last dependency)
+"com.laurenth.lightingtools-lightprobesvolumes": "file:../LocalPackages/LightingTools.LightProbesVolumes" (you need to add a "," if this is not the last dependency)
 - open the project and profit !
 
 # How to use it :
