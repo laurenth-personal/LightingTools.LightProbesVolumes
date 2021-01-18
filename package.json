@@ -1,8 +1,7 @@
 {
-    "name": "li.lightingtools.lightprobesvolumes",
-    "displayName": "Lighting Tools Light Probes Volumes",
-    "version": "0.0.1",
-    "unity": "2018.3",
-    "description": "Lighting tools test.",
-    "dependencies": {}
+  "name": "com.laurenth.lightingtools-lightprobesvolumes",
+  "displayName": "Lighting Tools Light Probes Volumes",
+  "version": "0.0.1",
+  "unity": "2018.3",
+  "type": "tool"
 }
