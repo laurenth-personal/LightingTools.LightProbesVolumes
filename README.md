@@ -3,14 +3,20 @@ Light probes volumes
 
 Requires Unity 2018.1 or above.
 
+[![openupm](https://img.shields.io/npm/v/com.laurenth.lightingtools-lightprobesvolumes?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.laurenth.lightingtools-lightprobesvolumes/)
+
 # Setup instructions :
 
+## Legacy
 - In your project folder create a "LocalPackages" folder next to your "Assets" folder
 - In the LocalPackages folder extract this repo under a "LightingTools.LightProbesVolumes" folder
 - In the "Packages" folder open the "manifest.json" in a text editing software
 - in "manifest.json" under "dependencies" add the line :
 "com.laurenth.lightingtools-lightprobesvolumes": "file:../LocalPackages/LightingTools.LightProbesVolumes" (you need to add a "," if this is not the last dependency)
 - open the project and profit !
+
+## Open UPM
+https://openupm.com/packages/com.laurenth.lightingtools-lightprobesvolumes/
 
 # How to use it :
 
