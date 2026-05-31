@@ -7,12 +7,16 @@ namespace LightingTools.LightProbesVolumes
     /// Utility class for mesh-based geometry detection.
     /// Raycasts directly against mesh geometry without requiring colliders.
     /// This allows detection of any static geometry in the scene.
+    /// Includes filtering to ignore transparent materials and objects on the "Ignore Raycast" layer.
     /// </summary>
     public static class GeometryUtils
     {
+        /// <summary>Layer mask for objects that should be ignored during raycasting (built-in Unity layer).</summary>
+        private const int IGNORE_RAYCAST_LAYER = 2;
+
         /// <summary>
         /// Performs a raycast against all meshes in the scene (collider or not).
-        /// Returns the closest hit point.
+        /// Returns the closest hit point. Filters out transparent materials and objects on ignore layers.
         /// </summary>
         /// <param name="ray">The ray to cast</param>
         /// <param name="maxDistance">Maximum distance for the raycast</param>
@@ -32,6 +36,10 @@ namespace LightingTools.LightProbesVolumes
             {
                 // Skip excluded transform and its children
                 if (excludeTransform != null && meshFilter.transform.IsChildOf(excludeTransform))
+                    continue;
+
+                // Skip filtered geometry
+                if (ShouldIgnoreGeometry(meshFilter))
                     continue;
 
                 Mesh mesh = meshFilter.sharedMesh;
@@ -55,6 +63,7 @@ namespace LightingTools.LightProbesVolumes
 
         /// <summary>
         /// Performs a raycast against all meshes and returns ALL hits along the ray, sorted by distance.
+        /// Filters out transparent materials and objects on ignore layers.
         /// </summary>
         /// <param name="ray">The ray to cast</param>
         /// <param name="maxDistance">Maximum distance for the raycast</param>
@@ -71,6 +80,10 @@ namespace LightingTools.LightProbesVolumes
                 if (excludeTransform != null && meshFilter.transform.IsChildOf(excludeTransform))
                     continue;
 
+                // Skip filtered geometry
+                if (ShouldIgnoreGeometry(meshFilter))
+                    continue;
+
                 Mesh mesh = meshFilter.sharedMesh;
                 if (mesh == null)
                     continue;
@@ -83,6 +96,45 @@ namespace LightingTools.LightProbesVolumes
             // Sort by distance
             allHits.Sort((a, b) => a.distance.CompareTo(b.distance));
             return allHits.ToArray();
+        }
+
+        /// <summary>
+        /// Determines if a mesh should be ignored during raycasting.
+        /// Checks layer and material transparency.
+        /// </summary>
+        /// <param name="meshFilter">The mesh filter to check</param>
+        /// <returns>True if the geometry should be ignored</returns>
+        private static bool ShouldIgnoreGeometry(MeshFilter meshFilter)
+        {
+            int layer = meshFilter.gameObject.layer;
+
+            // Check if on "Ignore Raycast" layer (layer 2 - built-in Unity layer)
+            if (layer == IGNORE_RAYCAST_LAYER)
+                return true;
+
+            // Check materials for transparency
+            Renderer renderer = meshFilter.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                foreach (Material mat in renderer.sharedMaterials)
+                {
+                    if (mat == null)
+                        continue;
+
+                    // Ignore materials with transparent render queue (>= 3000)
+                    // Standard transparent queue starts at 3000, translucent at 3100
+                    if (mat.renderQueue >= 3000)
+                        return true;
+
+                    // Also check for common transparency keywords
+                    if (mat.IsKeywordEnabled("_ALPHABLEND") || 
+                        mat.IsKeywordEnabled("_ALPHATEST") ||
+                        mat.IsKeywordEnabled("_ALPHAPREMULTIPLY"))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -206,6 +258,7 @@ namespace LightingTools.LightProbesVolumes
         /// <summary>
         /// Finds the closest mesh hit below a point (raycasts downward).
         /// Works with any static geometry, collider or not.
+        /// Filters out transparent materials and objects on ignore layers.
         /// </summary>
         public static bool FindFloorBelow(Vector3 position, float maxDistance, out MeshHitInfo hitInfo, Transform excludeTransform = null)
         {
@@ -215,6 +268,7 @@ namespace LightingTools.LightProbesVolumes
 
         /// <summary>
         /// Finds all mesh hits below a point, useful for multi-layer geometry detection.
+        /// Filters out transparent materials and objects on ignore layers.
         /// </summary>
         public static MeshHitInfo[] FindAllFloorsBelow(Vector3 position, float maxDistance, Transform excludeTransform = null)
         {
@@ -225,6 +279,7 @@ namespace LightingTools.LightProbesVolumes
         /// <summary>
         /// Tests if a position is inside geometry by casting rays in opposite directions.
         /// If hit counts differ, the probe is likely inside geometry.
+        /// Filters out transparent materials and objects on ignore layers.
         /// </summary>
         public static bool IsPositionInsideGeometry(Vector3 probePosition, Vector3 referencePosition, Transform excludeTransform = null)
         {
