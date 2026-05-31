@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -41,35 +41,47 @@ namespace LightingTools.LightProbesVolumes
 
             int currentTrace = 0;
 
-            //if followFloor we raycast from top to down in order to follow the static geometry (with colliders)
+            //if followFloor we raycast from top to down to find the floor height using Physics colliders
+            //and then place probes above that floor
             if(followFloor)
             {
                 foreach (Vector3 startPos in startPositions)
                 {
-                    //RaycastHit hit;
-                    RaycastHit[] hits;
-                    Ray ray = new Ray();
-                    ray.origin = startPos;
-                    ray.direction = -Vector3.up;
-                    hits = Physics.RaycastAll(ray, sizeY + 1, -1, QueryTriggerInteraction.Ignore);
+                    // Use Physics raycast to detect floor colliders (fast and optimized)
+                    Ray ray = new Ray(startPos, Vector3.down);
+                    RaycastHit[] hits = Physics.RaycastAll(ray, sizeY + 1, -1, QueryTriggerInteraction.Ignore);
 
-                    //Validate hits
+                    //Validate hits and find the floor
                     foreach (var hit in hits)
                     {
+                        // Only use static geometry as floor
                         if (!hit.collider.gameObject.isStatic)
-                            break;
-                        if (hit.point.y + offsetFromFloor < maxY && hit.point.y + offsetFromFloor > minY)
+                            continue;
+
+                        float floorHeight = hit.point.y;
+                        
+                        if (floorHeight + offsetFromFloor < maxY && floorHeight + offsetFromFloor > minY)
                             VertPositions.Add(hit.point + new Vector3(0, offsetFromFloor, 0));
 
                         int maxLayer = fillVolume ? ycount : numberOfLayers;
 
                         for (int i = 1; i < maxLayer; i++)
                         {
-                            if (hit.point.y + offsetFromFloor + i * verticalSpacing < maxY && hit.point.y + offsetFromFloor + verticalSpacing > minY)
-                                VertPositions.Add(hit.point + new Vector3(0, offsetFromFloor + i * verticalSpacing, 0));
+                            float probeHeight = floorHeight + offsetFromFloor + i * verticalSpacing;
+                            if (probeHeight < maxY && probeHeight > minY)
+                                VertPositions.Add(new Vector3(startPos.x, probeHeight, startPos.z));
                         }
+                        
+                        // Only use the first (lowest) hit as the floor
+                        break;
                     }
-                    EditorUtility.DisplayProgressBar("Tracing floor collisions", currentTrace.ToString() + "/" + startPositions.Length.ToString(), (float)currentTrace / (float)startPositions.Length);
+
+                    if (hits.Length == 0)
+                    {
+                        Debug.LogWarning("No floor collider found below probe position at " + startPos + ". Make sure your floor geometry has a collider and is marked as static.");
+                    }
+
+                    EditorUtility.DisplayProgressBar("Tracing floor colliders", currentTrace.ToString() + "/" + startPositions.Length.ToString(), (float)currentTrace / (float)startPositions.Length);
                     currentTrace++;
                 }
                 EditorUtility.ClearProgressBar();
@@ -92,14 +104,14 @@ namespace LightingTools.LightProbesVolumes
             {
                 foreach(Vector3 position in VertPositions)
                 {
-                    Debug.DrawLine(position, position + Vector3.up * 0.5f,Color.red,3);
+                    Debug.DrawLine(position, position + Vector3.up * 0.5f, Color.red, 3);
                 }
             }
 
             List<Vector3> validVertPositions = new List<Vector3>();
 
-            //Inside Geometry test : take an arbitrary position in space and trace from that position to the probe position and back from the probe position to the arbitrary position. If the number of hits is different for both raycasts the probe is considered to be inside an object.
-            //When using Draw Debug the arbitrary position is the Green cross in the air.
+            //Inside Geometry test : use mesh-based detection to check if probes are inside geometry
+            //This works with any geometry in the scene, regardless of colliders
             if (discardInsideGeometry)
             {
                 int j = 0;
@@ -114,15 +126,21 @@ namespace LightingTools.LightProbesVolumes
                 {
                     EditorUtility.DisplayProgressBar("Checking probes inside geometry", j.ToString() + "/" + VertPositions.Count, (float)j / (float)VertPositions.Count);
 
-                    Ray forwardRay = new Ray(insideTestPosition, Vector3.Normalize(positionCandidate - insideTestPosition));
-                    Ray backwardRay = new Ray(positionCandidate, Vector3.Normalize(insideTestPosition - positionCandidate));
-                    RaycastHit[] hitsForward;
-                    RaycastHit[] hitsBackward;
-                    hitsForward = Physics.RaycastAll(forwardRay, Vector3.Distance(positionCandidate, insideTestPosition), -1, QueryTriggerInteraction.Ignore);
-                    hitsBackward = Physics.RaycastAll(backwardRay, Vector3.Distance(positionCandidate, insideTestPosition), -1, QueryTriggerInteraction.Ignore);
-                    if (hitsForward.Length == hitsBackward.Length) validVertPositions.Add(positionCandidate);
-                    else if (drawDebug)
-                        Debug.DrawRay(backwardRay.origin, backwardRay.direction * Vector3.Distance(positionCandidate, insideTestPosition), Color.cyan, 5);
+                    // Use mesh-based geometry detection to check if probe is inside any mesh
+                    if (GeometryUtils.IsPositionInsideGeometry(positionCandidate, insideTestPosition, gameObject.transform))
+                    {
+                        // Probe is inside geometry, skip it
+                        if (drawDebug)
+                        {
+                            Vector3 direction = Vector3.Normalize(positionCandidate - insideTestPosition);
+                            float distance = Vector3.Distance(positionCandidate, insideTestPosition);
+                            Debug.DrawRay(positionCandidate, -direction * distance, Color.cyan, 5);
+                        }
+                    }
+                    else
+                    {
+                        validVertPositions.Add(positionCandidate);
+                    }
                     j++;
                 }
                 EditorUtility.ClearProgressBar();
